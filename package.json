@@ -1,0 +1,43 @@
+{
+  "name": "layer-infinite-dollar1usd",
+  "version": "1.0.0",
+  "description": "Layer ∞ - Revolutionary Multi-Chain Coordination Protocol for Web3",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
+    "node": "hardhat node",
+    "clean": "hardhat clean",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "blockchain",
+    "web3",
+    "ethereum",
+    "protocol",
+    "multi-chain",
+    "EIP-7702",
+    "ERC-7579",
+    "ERC-4337"
+  ],
+  "author": "Emad Alshamery <emad@layer-infinity.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@types/node": "^20.0.0",
+    "hardhat": "^2.19.0",
+    "typescript": "^5.2.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "ethers": "^6.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
