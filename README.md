@@ -1,3 +1,25 @@
+# Layer ∞ (Layer Infinite)
+**The Sovereign Infrastructure for Web3**
+
+Layer Infinity is a global multi-chain orchestration protocol designed to solve Web3 fragmentation. 
+
+## Core Infrastructure
+* **SovereignRelayer**: Our core decentralized infrastructure, built to ensure transaction integrity and MEV-resilience.
+* **Unified Identity System (UIS)**: Enabling seamless cross-chain experiences.
+* **Gas Optimized Bundling (GOB)**: Reducing transaction costs by up to 40%.
+
+## Technical Focus
+* Fully compatible with **EIP-7702** and **ERC-7579** standards.
+* Built with Solidity 0.8.20 and Hardhat.
+
+## Connect With Us
+* **GitHub**: [github.com/Emadalshamery](https://github.com/Emadalshamery)
+* **Official Presence**: [Layer Infinity](https://x.com/Dollar1Usd)
+* 
+
+
+
+
 # Layer ∞ (Layer Infinite) - البروتوكول الثوري للبلوكشين
 
 ## 🌌 رؤيتنا
