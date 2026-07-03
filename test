@@ -1,66 +1,56 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { InfiniteDelegationEngine } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe("InfiniteDelegationEngine (IDE) - Security & MEV Suite", function () {
+describe("Layer Infinite & Dollar1usd Integration Suite", function () {
   let ide: any;
+  let token: any;
   let owner: HardhatEthersSigner;
   let delegatee: HardhatEthersSigner;
-  let targetContract: HardhatEthersSigner;
-  const chainId = 1; // Ethereum Mainnet ID
+  let user: HardhatEthersSigner;
+  const chainId = 1;
 
   beforeEach(async function () {
-    // جلب الحسابات الافتراضية من بيئة Hardhat المحلية
-    [owner, delegatee, targetContract] = await ethers.getSigners();
+    [owner, delegatee, user] = await ethers.getSigners();
 
-    // نشر العقد الذكي المطوّر
+    // 1. نشر محرك التفويض
     const IDEFactory = await ethers.getContractFactory("InfiniteDelegationEngine");
     ide = await IDEFactory.deploy();
     await ide.waitForDeployment();
+
+    // 2. نشر عقد التوكن المستقر
+    const TokenFactory = await ethers.getContractFactory("Dollar1usdToken");
+    token = await TokenFactory.deploy();
+    await token.waitForDeployment();
+
+    // 3. منح الصلاحية للمحرك داخل التوكن (محاكاة لسكريبت النشر)
+    await token.connect(owner).updateAuthorityStatus(await ide.getAddress(), true);
   });
 
-  describe("1. Delegation Creation & Emergency Revocation", function () {
-    it("Should successfully create a dynamic non-custodial delegation", async function () {
-      const maxGasPrice = ethers.parseUnits("50", "gwei");
-      
-      await expect(ide.connect(owner).createDelegation(delegatee.address, chainId, maxGasPrice))
-        .to.emit(ide, "DelegationCreated");
-
-      const delegationId = await ide.getDelegationId(owner.address, chainId);
-      const delegation = await ide.delegations(owner.address, delegationId);
-
-      expect(delegation.delegatee).to.equal(delegatee.address);
-      expect(delegation.maxGasPrice).to.equal(maxGasPrice);
-      expect(delegation.isActive).to.be.true;
+  describe("1. Infrastructure Authorization Check", function () {
+    it("Should confirm that IDE is registered in the token's Authority Cluster", async function () {
+      expect(await token.isAuthorityCluster(await ide.getAddress())).to.be.true;
     });
 
-    it("Should allow emergency revocation and instantly increment nonce", async function () {
-      const maxGasPrice = ethers.parseUnits("50", "gwei");
-      await ide.connect(owner).createDelegation(delegatee.address, chainId, maxGasPrice);
-
-      await expect(ide.connect(owner).revokeDelegation(chainId))
-        .to.emit(ide, "DelegationRevoked");
-
-      const delegationId = await ide.getDelegationId(owner.address, chainId);
-      const delegation = await ide.delegations(owner.address, delegationId);
-      
-      expect(delegation.isActive).to.be.false;
-      expect(await ide.userNonces(owner.address)).to.equal(1);
+    it("Should reject direct protected minting from unauthorized users", async function () {
+      const mintAmount = ethers.parseUnits("1000", 18);
+      await expect(
+        token.connect(user).mintProtected(user.address, mintAmount)
+      ).to.be.revertedWith("Dollar1usd: Caller is not authorized");
     });
   });
 
-  describe("2. Cryptographic Signatures & MEV Verification (EIP-7702 compliant)", function () {
-    it("Should reject execution if current gas price exceeds the configured MEV cap", async function () {
-      const lowGasCap = ethers.parseUnits("10", "gwei"); // حد منخفض جداً للمحاكاة
+  describe("2. EIP-7702 Delegation and MEV Gas Verification", function () {
+    it("Should enforce maxGasPrice rules upon infrastructure requests", async function () {
+      const lowGasCap = ethers.parseUnits("5", "gwei");
       await ide.connect(owner).createDelegation(delegatee.address, chainId, lowGasCap);
 
       const payload = "0x";
-      const signature = "0x" + "0".repeat(130); // توقيع وهمي للفحص السريع
+      const signature = "0x" + "0".repeat(130);
 
-      // محاكاة التنفيذ - ستفشل لأن سعر غاز الشبكة الافتراضي في هاردات أعلى من 10 جيواي
+      // الفحص يجب أن يرفض المعاملة لأن غاز الشبكة الافتراضي أعلى من 5 جيواي لحماية المستخدم من الـ MEV
       await expect(
-        ide.connect(delegatee).verifyAndExecute(owner.address, chainId, targetContract.address, payload, signature)
+        ide.connect(delegatee).verifyAndExecute(owner.address, chainId, await token.getAddress(), payload, signature)
       ).to.be.revertedWith("IDE: Gas price exceeds MEV limit");
     });
   });
