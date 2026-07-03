@@ -1,3 +1,29 @@
+# Layer Infinite & Dollar1usd Protocol
+
+An advanced, multi-chain coordination and sovereign intent execution layer engineered for the **Dollar1usd Protocol**. Layer Infinite delivers next-generation decentralization by introducing gas-optimized, MEV-resilient infrastructure coupled with non-custodial session delegation.
+
+## 🚀 Core Architecture Components
+
+### 1. InfiniteDelegationEngine (IDE)
+The cryptographic heart of the protocol, compliant with **EIP-7702** and **ERC-7579**. It allows users (EOAs) to securely delegate dynamic execution rights to smart infrastructure relayers without relinquishing asset custody.
+* **Cryptographic Signatures:** Built-in ECDSA verification (`recoverSigner`) to validate off-chain session state approvals.
+* **Anti-Replay Mechanics:** Secure dynamic nonces tracking user states across distributed execution pipelines.
+
+### 2. Dollar1usd Token (1USD)
+The native stablecoin architecture powering ecosystem liquidities, reinforced against MEV-exploitation vectors.
+* **EIP-2612 Gasless Permits:** Native `permit` compilation enabling zero-gas token approvals.
+* **Infrastructure Auth Protection:** Constrained minting and cross-chain burning functions accessible strictly via authorized **Authority Clusters**.
+
+---
+
+## 🛡️ Advanced MEV-Resilience (GOB Mechanics)
+
+Layer Infinite shields user transactions from malicious Block Builders, searchers, and sandwich attacks through programmatic environmental assertions:
+
+```solidity
+// Enforced gas caps reject manipulated builder-level bundles
+require(tx.gasprice <= auth.maxGasPrice, "IDE: Gas price exceeds MEV limit");
+
 # Layer ∞ (Layer Infinite)
 
 ### The Sovereign Architecture for Cross-Chain Intent Execution & MEV-Resilience
