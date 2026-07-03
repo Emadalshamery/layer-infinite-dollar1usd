@@ -10,7 +10,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 200, // تحسين كود النشر وتقليل استهلاك الغاز عند النشر
       },
     },
   },
@@ -41,9 +41,28 @@ const config: HardhatUserConfig = {
     },
   },
 
+  // إعدادات محلل تقارير الغاز لإثبات كفاءة أداء بروتوكول Layer Infinite
+  gasReporter: {
+    enabled: process.env.REPORT_GAS !== undefined ? process.env.REPORT_GAS === "true" : true,
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY || "", // لجلب أسعار الغاز الفلكية الحية ومقابلها بالدولار
+    token: "ETH",
+    outputFile: "gas-report.txt", // حفظ التقرير في ملف نصي ليقرأه المستثمرون مباشرة
+    noColors: true,
+  },
+
+  // التحقق التلقائي من العقود على مستكشفات الشبكات (Verification)
+  etherscan: {
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+      base: process.env.BASESCAN_API_KEY || "",
+    },
+  },
+
   paths: {
     sources: "./contracts",
-    tests: "./contracts/test",
+    tests: "./test", // تم تعديله إلى المسار القياسي لحماية هيكلية جيت هاب
     cache: "./cache",
     artifacts: "./artifacts",
   },
