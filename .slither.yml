@@ -1,0 +1,6 @@
+processors:
+  - "only-reports"
+detectors:
+  - reentrancy
+  - timestamp
+  - tx-origin
