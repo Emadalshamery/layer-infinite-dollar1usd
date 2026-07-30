@@ -4,3 +4,4 @@ detectors:
   - reentrancy
   - timestamp
   - tx-origin
+# ci-trigger: update to trigger workflows
