@@ -1,0 +1,24 @@
+name: Security checks (Slither)
+on:
+  push:
+    branches: [ feature/dollar1usd-bootstrap, main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install slither-analyzer
+      - name: Run Slither
+        run: |
+          if [ -f foundry.toml ]; then
+            slither .
+          else
+            echo "No foundry.toml found — skipping slither"
+          fi
