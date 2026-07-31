@@ -1,0 +1,10 @@
+"scripts": {
+  "test": "npx hardhat test",
+  "test:gas": "npx hardhat test --gas",
+  "coverage": "npx hardhat coverage",
+  "compile": "npx hardhat compile",
+  "clean": "npx hardhat clean",
+  "deploy:sepolia": "npx hardhat run scripts/deploy.ts --network sepolia",
+  "deploy:hardhat": "npx hardhat run scripts/deploy.ts",
+  "verify": "npx hardhat verify"
+}
