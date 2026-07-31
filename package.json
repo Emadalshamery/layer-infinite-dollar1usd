@@ -1,5 +1,5 @@
 {
-  "name": "layer infinite dollar1usd",
+  "name": "layer-infinite-dollar1usd",
   "version": "1.0.1",
   "description": "Layer ∞ - Revolutionary Multi-Chain Coordination Protocol for Web3",
   "main": "dist/index.js",
@@ -28,7 +28,7 @@
   "license": "MIT",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "@types/node": "^20.0.0",
+    "@types_node": "^20.0.0",
     "hardhat": "^2.19.0",
     "typescript": "^5.2.0",
     "@openzeppelin/contracts": "^5.0.0"
