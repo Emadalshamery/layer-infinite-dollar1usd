@@ -1,0 +1,14 @@
+# 1. تثبيت جميع التبعيات
+npm install
+
+# 2. تجميع العقود
+npm run compile
+
+# 3. تشغيل الاختبارات
+npm run test
+
+# 4. تشغيل الاختبارات مع تقرير الغاز
+npm run test:gas
+
+# 5. تشغيل تغطية الاختبارات
+npm run coverage
