@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 /**
  * @title InfiniteDelegationEngine (IDE) - Dollar1usd Protocol
  * @dev يسمح بالتفويض الآمن مرن الحالات عبر السلاسل وإدارة مسارات المعاملات مع دعم كامل لآليات EIP-7702 وحماية MEV.
  */
-contract InfiniteDelegationEngine {
+contract InfiniteDelegationEngine is ReentrancyGuard {
+    using ECDSA for bytes32;
 
     // هيكل بيانات التفويض
     struct Delegation {
@@ -49,8 +53,8 @@ contract InfiniteDelegationEngine {
         uint256 _maxGasPrice
     ) external {
         require(_delegatee != address(0), "IDE: Invalid delegatee address");
-        
         bytes32 delegationId = getDelegationId(msg.sender, _chainId);
+        require(!delegations[msg.sender][delegationId].isActive, "IDE: Delegation already exists and is active");
         
         delegations[msg.sender][delegationId] = Delegation({
             delegatee: _delegatee,
@@ -85,7 +89,7 @@ contract InfiniteDelegationEngine {
         address _target,
         bytes calldata _payload,
         bytes calldata _signature
-    ) external payable returns (bytes memory) {
+    ) external payable nonReentrant returns (bytes memory) {
         bytes32 delegationId = getDelegationId(_owner, _chainId);
         Delegation memory auth = delegations[_owner][delegationId];
         
@@ -95,11 +99,11 @@ contract InfiniteDelegationEngine {
         // حماية الغاز والـ MEV: رفض التنفيذ إذا حاول البناء أو البوت التلاعب بسعر الغاز
         require(tx.gasprice <= auth.maxGasPrice, "IDE: Gas price exceeds MEV limit");
 
-        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاعب بالـ Payload
+        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاع�� بالـ Payload
         bytes32 messageHash = keccak256(abi.encodePacked(_owner, _chainId, _target, _payload, auth.nonce));
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         
-        address signer = recoverSigner(ethSignedMessageHash, _signature);
+        address signer = ethSignedMessageHash.recover(_signature);
         require(signer == _owner, "IDE: Invalid cryptographic signature");
 
         // زيادة الـ Nonce لمنع هجمات إعادة التشغيل
@@ -115,20 +119,10 @@ contract InfiniteDelegationEngine {
     }
 
     /**
-     * @dev دالة داخلية لمصادقة مسترجع التوقيع (ECDSA Recovery)
+     * @dev دالة مساعدة لقراءة بيانات التفويض بسهولة
      */
-    function recoverSigner(bytes32 _ethSignedMessageHash, bytes calldata _signature) internal pure returns (address) {
-        require(_signature.length == 65, "IDE: Invalid signature length");
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        assembly {
-            r := calldataload(_signature.offset)
-            s := calldataload(_signature.offset + 32)
-            v := byte(0, calldataload(_signature.offset + 64))
-        }
-
-        return ecrecover(_ethSignedMessageHash, v, r, s);
+    function getDelegation(address _owner, uint256 _chainId) external view returns (Delegation memory) {
+        bytes32 delegationId = getDelegationId(_owner, _chainId);
+        return delegations[_owner][delegationId];
     }
 }
