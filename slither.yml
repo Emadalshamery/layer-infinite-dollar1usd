@@ -1,0 +1,1 @@
+cat > .github/workflows/slither.yml <<'YML' name: Security checks (Slither) on: push: branches: [ feature/dollar1usd-bootstrap, main ] pull_request: branches: [ main ]

@@ -1,0 +1,26 @@
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Use Node.js ${{ matrix.node-version }}
+    uses: actions/setup-node@v4
+    with:
+      node-version: ${{ matrix.node-version }}
+      cache: 'npm'
+      cache-dependency-path: package-lock.json
+
+  - name: Install dependencies
+    run: npm ci --prefer-offline --no-audit --progress=false
+
+  - name: Compile contracts
+    run: npx hardhat compile
+
+  - name: Run tests
+    run: npx hardhat test --no-compile
+
+  - name: Upload gas report
+    if: always()
+    uses: actions/upload-artifact@v4
+    with:
+      name: gas-report
+      path: gas-report.txt
