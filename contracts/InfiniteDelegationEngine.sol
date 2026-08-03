@@ -38,7 +38,7 @@ contract InfiniteDelegationEngine is ReentrancyGuard {
     }
 
     /**
-     * @dev توليد معرف التفويض الفريد (Delegation ID)
+     * @dev توليد معرف التفويض ا��فريد (Delegation ID)
      */
     function getDelegationId(address _owner, uint256 _chainId) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_owner, _chainId));
@@ -99,7 +99,7 @@ contract InfiniteDelegationEngine is ReentrancyGuard {
         // حماية الغاز والـ MEV: رفض التنفيذ إذا حاول البناء أو البوت التلاعب بسعر الغاز
         require(tx.gasprice <= auth.maxGasPrice, "IDE: Gas price exceeds MEV limit");
 
-        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاع�� بالـ Payload
+        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاعب بالـ Payload
         bytes32 messageHash = keccak256(abi.encodePacked(_owner, _chainId, _target, _payload, auth.nonce));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         
