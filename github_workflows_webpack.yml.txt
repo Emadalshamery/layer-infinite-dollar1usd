@@ -1,0 +1,69 @@
+name: NodeJS with Webpack
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'webpack.config.js'
+      - '.github/workflows/webpack.yml'
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-webpack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Prefer LTS versions; remove non-LTS if you want fewer runs
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Cache webpack cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache
+            .webpack/cache
+          key: ${{ runner.os }}-webpack-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-webpack-${{ matrix.node-version }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --progress=false
+
+      - name: Build (webpack)
+        # Prefer `npm run build` so scripts/versions are controlled from package.json
+        run: npm run build --if-present --silent
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webpack-dist
+          path: |
+            dist
+            build
