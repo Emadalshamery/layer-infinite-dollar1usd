@@ -1,0 +1,33 @@
+# 1) استبدال TestTarget.sol بالمحتوى الصحيح
+cat > contracts/TestTarget.sol <<'EOF'
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+contract TestTarget {
+    uint256 public value;
+    event ValueSet(uint256 newValue);
+
+    function setValue(uint256 _v) external payable {
+        value = _v;
+        emit ValueSet(_v);
+    }
+
+    function revertIfZero(uint256 _v) external {
+        require(_v != 0, "zero not allowed");
+    }
+}
+EOF
+
+# 2) أنشئ الملف الصحيح في المسار test/
+mkdir -p test
+cat > test/InfiniteDelegationEngine.test.ts <<'EOF'
+(ضع هنا محتوى الاختبار المنظف كما أعلاه)
+EOF
+
+# 3) احذف النسخة الملوثة إذا موجودة
+git rm -f contracts/test/InfiniteDelegationEngine.test.ts || true
+
+# 4) التزم وادفع
+git add contracts/TestTarget.sol test/InfiniteDelegationEngine.test.ts
+git commit -m "test: add cleaned Hardhat tests and fix TestTarget.sol (remove shell wrappers)"
+git push origin hardening/ide-security-ci-tests

@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat test",
+    "test": "hardhat test --show-stack-traces",
+    "coverage": "npx hardhat coverage",
     "deploy:local": "hardhat run scripts/deploy.ts",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
@@ -32,6 +33,9 @@
     "hardhat": "^2.19.0",
     "typescript": "^5.2.0",
     "@openzeppelin/contracts": "^5.0.0"
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "solidity-coverage": "^0.8.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",
