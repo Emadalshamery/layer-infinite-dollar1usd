@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+    paths:
+      - 'features/ai/github-app/**'
+  pull_request:
+    paths:
+      - 'features/ai/github-app/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd features/ai/github-app || exit 0
+          npm ci || npm install
+      - name: Run tests
+        run: |
+          cd features/ai/github-app || exit 0
+          npm test
