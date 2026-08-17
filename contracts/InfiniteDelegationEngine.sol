@@ -6,42 +6,39 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title InfiniteDelegationEngine (IDE) - Dollar1usd Protocol
- * @dev يسمح بالتفويض الآمن مرِّن عبر السلاسل وإدارة مسارات المعاملات مع دعم حماية MEV.
- * تحسينات أمنية: استخدام OpenZeppelin ECDSA، ReentrancyGuard، تحقق من العناوين، وإدارة Nonce آمنة.
+ * @dev يسمح بالتفويض الآمن مرن الحالات عبر السلاسل وإدارة مسارات المعاملات مع دعم كامل لآليات EIP-7702 وحماية MEV.
  */
 contract InfiniteDelegationEngine is ReentrancyGuard {
     using ECDSA for bytes32;
 
     // هيكل بيانات التفويض
     struct Delegation {
-        address owner;         // صاحب الحساب الأصلي
-        address delegatee;     // الجهة المفوضة (البوت أو الوكيل)
-        uint256 chainId;       // معرف السلسلة المستهدفة (عبر السلاسل)
-        uint256 maxGasPrice;   // الحد الأقصى لسعر الغاز المسموح به لحماية MEV
-        uint256 nonce;         // عدد الاستخدامات/Nonce لحماية التوقيعات
-        bool isActive;         // حالة التفويض
+        address delegatee;    // الجهة المفوضة (البوت أو الوكيل)
+        uint256 chainId;      // معرف السلسلة المستهدفة (عبر السلاسل)
+        uint256 maxGasPrice;  // الحد الأقصى لسعر الغاز المسموح به لحماية MEV
+        uint256 nonce;        // كود الحماية ضد إعادة تشغيل المعاملات (Replay Attack)
+        bool isActive;        // حالة التفويض
     }
 
-    // تعيين من معرف التفويض إلى هيكل التفويض
-    // معرف التفويض = keccak256(owner, chainId)
-    mapping(bytes32 => Delegation) public delegations;
-
-    // تتبع الـ Nonce الخاص بكل owner (بشكل عام)
+    // تعيين من عنوان المستخدم (Owner) إلى معرف التفويض (Delegation ID)
+    mapping(address => mapping(bytes32 => Delegation)) public delegations;
+    
+    // تتبع الـ Nonce الخاص بكل مستخدم لحماية التوقيعات الديناميكية
     mapping(address => uint256) public userNonces;
 
     // الأحداث (Events) لمزامنة الحالات خارج السلسلة
     event DelegationCreated(address indexed owner, address indexed delegatee, uint256 chainId, bytes32 delegationId);
     event DelegationRevoked(address indexed owner, uint256 chainId, bytes32 delegationId);
-    event ExecutionTriggered(address indexed owner, address indexed delegatee, uint256 chainId, bytes32 delegationId);
+    event ExecutionTriggered(address indexed owner, address indexed delegatee, uint256 chainId);
 
     // غطاء الحماية للاستدعاء الطارئ
-    modifier onlyActiveDelegation(bytes32 delegationId) {
-        require(delegations[delegationId].isActive, "IDE: Delegation is not active");
+    modifier onlyDclOwner(bytes32 delegationId) {
+        require(delegations[msg.sender][delegationId].isActive, "IDE: Delegation is not active or not owned");
         _;
     }
 
     /**
-     * @dev توليد معرف التفويض الفريد (Delegation ID)
+     * @dev توليد معرف التفويض ا��فريد (Delegation ID)
      */
     function getDelegationId(address _owner, uint256 _chainId) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_owner, _chainId));
@@ -60,19 +57,10 @@ contract InfiniteDelegationEngine is ReentrancyGuard {
         require(!delegations[msg.sender][delegationId].isActive, "IDE: Delegation already exists and is active");
         
         delegations[msg.sender][delegationId] = Delegation({
-
-        bytes32 delegationId = getDelegationId(msg.sender, _chainId);
-        Delegation storage existing = delegations[delegationId];
-        require(!existing.isActive, "IDE: Active delegation already exists");
-
-        uint256 nonce = userNonces[msg.sender];
-
-        delegations[delegationId] = Delegation({
-            owner: msg.sender,
             delegatee: _delegatee,
             chainId: _chainId,
             maxGasPrice: _maxGasPrice,
-            nonce: nonce,
+            nonce: userNonces[msg.sender],
             isActive: true
         });
 
@@ -84,20 +72,16 @@ contract InfiniteDelegationEngine is ReentrancyGuard {
      */
     function revokeDelegation(uint256 _chainId) external {
         bytes32 delegationId = getDelegationId(msg.sender, _chainId);
-        Delegation storage d = delegations[delegationId];
-        require(d.isActive, "IDE: Delegation already inactive");
-        require(d.owner == msg.sender, "IDE: Not delegation owner");
-
-        d.isActive = false;
+        require(delegations[msg.sender][delegationId].isActive, "IDE: Delegation already inactive");
+        
+        delegations[msg.sender][delegationId].isActive = false;
         userNonces[msg.sender]++; // زيادة الـ Nonce لتعطيل أي توقيعات قديمة خارج السلسلة فوراً
-
+        
         emit DelegationRevoked(msg.sender, _chainId, delegationId);
     }
 
     /**
-     * @dev التحقق من شروط الغاز والتوقيع، ثم تنفيذ المعاملة المستهدفة لحماية الحساب من الـ MEV
-     * يتوقع توقيع المالك على الرسالة التالية:
-     * keccak256(abi.encodePacked(\"IDE_EXECUTE\", owner, chainId, target, payloadHash, nonce))
+     * @dev التحقق من شروط الغاز والتوقيع، ثم تنفيذ المعاملة المستهدفة لحماية الحساب من الـ MEV (متوافق مع EIP-7702)
      */
     function verifyAndExecute(
         address _owner,
@@ -106,35 +90,28 @@ contract InfiniteDelegationEngine is ReentrancyGuard {
         bytes calldata _payload,
         bytes calldata _signature
     ) external payable nonReentrant returns (bytes memory) {
-        require(_target != address(0), "IDE: target zero address");
-
         bytes32 delegationId = getDelegationId(_owner, _chainId);
-        Delegation storage auth = delegations[delegationId];
-
-        require(auth.isActive, "IDE: Request unauthorized or delegation inactive");
+        Delegation memory auth = delegations[_owner][delegationId];
+        
+        require(auth.isActive, "IDE: Request unauthorized");
         require(msg.sender == auth.delegatee, "IDE: Caller is not the authorized delegatee");
-
-        // حماية الغاز والـ MEV: رفض التنفيذ إذا تجاوز tx.gasprice الحد
+        
+        // حماية الغاز والـ MEV: رفض التنفيذ إذا حاول البناء أو البوت التلاعب بسعر الغاز
         require(tx.gasprice <= auth.maxGasPrice, "IDE: Gas price exceeds MEV limit");
 
-        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاع�� بالـ Payload
+        // التحقق من التوقيع الرقمي لمنع انتحال الشخصية أو التلاعب بالـ Payload
         bytes32 messageHash = keccak256(abi.encodePacked(_owner, _chainId, _target, _payload, auth.nonce));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         
         address signer = ethSignedMessageHash.recover(_signature);
-        // احسب هاش للpayload لتقليل الهجوم على طول الرسالة
-        bytes32 payloadHash = keccak256(_payload);
-
-        bytes32 messageHash = keccak256(abi.encodePacked("IDE_EXECUTE", _owner, _chainId, _target, payloadHash, auth.nonce));
-        address signer = messageHash.toEthSignedMessageHash().recover(_signature);
         require(signer == _owner, "IDE: Invalid cryptographic signature");
 
         // زيادة الـ Nonce لمنع هجمات إعادة التشغيل
-        auth.nonce++;
+        delegations[_owner][delegationId].nonce++;
         userNonces[_owner]++;
 
         // تنفيذ المعاملة الفعلية بالنيابة عن الحساب المفوض
-        emit ExecutionTriggered(_owner, msg.sender, _chainId, delegationId);
+        emit ExecutionTriggered(_owner, msg.sender, _chainId);
         (bool success, bytes memory result) = _target.call{value: msg.value}(_payload);
         require(success, "IDE: Target execution reverted");
 
