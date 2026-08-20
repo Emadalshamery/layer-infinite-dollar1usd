@@ -26,7 +26,7 @@ contract Dollar1usdToken is ERC20, ERC20Permit, Ownable {
     constructor() 
         ERC20("Dollar1usd", "1USD") 
         ERC20Permit("Dollar1usd") 
-        Ownable(msg.sender) 
+        Ownable()
     {
         // صك أولي للمؤسس لإدارة السيولة المبدئية وحزم الاختبارات
         _mint(msg.sender, 100000000 * 10**decimals());
